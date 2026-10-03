@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VULCANO — Fuego en su forma más pura</title>
+  <meta name="description" content="VULCANO — Colección premium de diseño volcánico. Descubre la nueva edición y compra online.">
+  <link rel="icon" type="image/png" href="simbolo%20vulcano%201.png">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+  <div class="promo">
+    Envío gratuito en pedidos superiores a 50 €. <a href="#/shop">Comprobar &gt;</a>
+  </div>
+
+  <header class="nav">
+    <nav class="nav-pill" aria-label="Navegación principal">
+      <a class="logo-chip" href="#/" aria-label="Vulcano inicio">
+        <img src="simbolo%20vulcano%201.png" alt="Logo Vulcano">
+      </a>
+      <div class="nav-links">
+        <a href="#/" data-nav="home">Inicio</a>
+        <a href="#/shop" data-nav="shop">Shop</a>
+        <a href="#/shop" data-nav="coleccion">Colección</a>
+        <a href="#/account" data-nav="account">Cuenta</a>
+      </div>
+      <div class="nav-icons">
+        <button class="icon-btn" id="search-btn" aria-label="Buscar">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.8-3.8"/></svg>
+        </button>
+        <a class="icon-btn" href="#/cart" aria-label="Carrito" id="cart-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 7h12l1.2 13H4.8L6 7z"/><path d="M9 10V6a3 3 0 0 1 6 0v4"/></svg>
+          <span class="cart-badge" id="cart-badge" hidden>0</span>
+        </a>
+        <a class="nav-user" href="#/login" id="nav-user" data-nav="login">Entrar</a>
+      </div>
+    </nav>
+  </header>
+
+  <main id="app"></main>
+
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-logo">
+        <a class="logo-chip" href="#/" aria-label="Vulcano">
+          <img src="simbolo%20vulcano%201.png" alt="Logo Vulcano" style="height:28px">
+        </a>
+      </div>
+      <div class="footer-cols">
+        <div class="footer-col">
+          <h4>Shop</h4>
+          <a href="#/shop">Todos los productos</a>
+          <a href="#/shop">Colección</a>
+          <a href="#/shop">Edición limitada</a>
+          <a href="#/shop">Accesorios</a>
+        </div>
+        <div class="footer-col">
+          <h4>Cuenta</h4>
+          <a href="#/login">Entrar</a>
+          <a href="#/account">Mis pedidos</a>
+          <a href="#/cart">Carrito</a>
+        </div>
+        <div class="footer-col">
+          <h4>Soporte</h4>
+          <a href="#/account">Envíos</a>
+          <a href="#/account">Devoluciones</a>
+          <a href="#/account">Contacto</a>
+        </div>
+      </div>
+      <div class="footer-legal">
+        <p class="t-legal">Vulcano — Página de demostración. Productos y precios de muestra.</p>
+        <p class="t-legal">Copyright © 2026 Vulcano. Todos los derechos reservados. Diseño inspirado en apple.com/es.</p>
+      </div>
+    </div>
+  </footer>
+
+  <div class="search-overlay" id="search-overlay" role="dialog" aria-label="Buscar productos">
+    <div class="search-top">
+      <input class="search-input" id="search-input" type="search" placeholder="Buscar en la tienda" autocomplete="off">
+      <button class="icon-btn" id="search-close" aria-label="Cerrar buscador">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <div class="search-results" id="search-results"></div>
+  </div>
+
+  <div id="toast-zone"></div>
+
+  <script src="js/app.js"></script>
+</body>
+</html>
