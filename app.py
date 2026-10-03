@@ -67,6 +67,23 @@ def admin_required(f):
     return wrap
 
 
+def attach_items(cur, orders):
+    """Adjunta a cada pedido sus líneas (order_items) con la forma que espera el front."""
+    if not orders:
+        return orders
+    cur.execute(
+        'SELECT order_id, product_id, name, unit_price, qty FROM order_items '
+        'WHERE order_id = ANY(%s) ORDER BY order_id, id',
+        ([o['id'] for o in orders],))
+    by_order = {}
+    for oid, pid, name, price, qty in cur.fetchall():
+        by_order.setdefault(oid, []).append(
+            {'id': pid, 'name': name, 'price': float(price), 'qty': qty})
+    for o in orders:
+        o['items'] = by_order.get(o['id'], [])
+    return orders
+
+
 def authenticate_request():
     """Valida email/password y rol esperado. Devuelve (user, error_response)."""
     data = request.get_json(silent=True) or {}
@@ -257,7 +274,11 @@ def product_delete(pid):
     conn = connect()
     try:
         with conn.cursor() as cur:
-            cur.execute('DELETE FROM products WHERE id = %s RETURNING id', (pid,))
+            try:
+                cur.execute('DELETE FROM products WHERE id = %s RETURNING id', (pid,))
+            except IntegrityError:
+                conn.rollback()
+                return jsonify({'error': 'No se puede eliminar: el producto está en pedidos'}), 409
             if not cur.fetchone():
                 conn.rollback()
                 return jsonify({'error': 'Producto no encontrado'}), 404
@@ -300,9 +321,9 @@ def orders_list():
                 cur.execute('SELECT * FROM orders ORDER BY id DESC')
             else:
                 cur.execute(
-                    'SELECT * FROM orders WHERE LOWER(email) = %s ORDER BY id DESC',
-                    (u['email'].lower(),))
-            rows = dict_rows(cur)
+                    'SELECT * FROM orders WHERE user_id = %s ORDER BY id DESC',
+                    (u['id'],))
+            rows = attach_items(cur, dict_rows(cur))
     finally:
         conn.close()
     return jsonify({'orders': sane(rows)})
@@ -324,7 +345,7 @@ def order_create():
     try:
         with conn.cursor() as cur:
             total = 0.0
-            items = []
+            lines = []
             for it in items_in:
                 try:
                     pid = int(it.get('id'))
@@ -338,23 +359,32 @@ def order_create():
                 if not row:
                     continue
                 price = float(row[2])
-                items.append({'id': pid, 'name': row[1], 'price': price, 'qty': qty})
+                lines.append({'product_id': pid, 'name': row[1], 'price': price, 'qty': qty})
                 total += price * qty
-            if not items:
+            if not lines:
                 conn.rollback()
                 return jsonify({'error': 'Carrito inválido'}), 400
             cur.execute("SELECT COALESCE(MAX(id), 0) + 1 FROM orders")
             code = 'V-%04d' % cur.fetchone()[0]
             cur.execute(
-                'INSERT INTO orders (code, email, name, items, total, address, payment)'
+                'INSERT INTO orders (code, user_id, email, name, total, address, payment)'
                 ' VALUES (%s, %s, %s, %s, %s, %s, %s) RETURNING *',
-                (code, u['email'], u['name'], Json(items), round(total, 2),
+                (code, u['id'], u['email'], u['name'], round(total, 2),
                  Json(address), payment))
-            row = dict_rows(cur)[0]
+            order = dict_rows(cur)[0]
+            for ln in lines:
+                cur.execute(
+                    'INSERT INTO order_items (order_id, product_id, name, unit_price, qty)'
+                    ' VALUES (%s, %s, %s, %s, %s)',
+                    (order['id'], ln['product_id'], ln['name'], ln['price'], ln['qty']))
             conn.commit()
+            order['items'] = [
+                {'id': ln['product_id'], 'name': ln['name'],
+                 'price': ln['price'], 'qty': ln['qty']} for ln in lines
+            ]
     finally:
         conn.close()
-    return jsonify({'order': sane(row)})
+    return jsonify({'order': sane(order)})
 
 
 @app.route('/api/orders/<int:oid>/status', methods=['PATCH'])
@@ -374,6 +404,7 @@ def order_status(oid):
             if not rows:
                 conn.rollback()
                 return jsonify({'error': 'Pedido no encontrado'}), 404
+            attach_items(cur, rows)
             conn.commit()
     finally:
         conn.close()
@@ -408,7 +439,11 @@ def customer_delete(uid):
                 return jsonify({'error': 'Usuario no encontrado'}), 404
             if rows[0]['id'] == me['id'] or rows[0]['role'] == 'admin':
                 return jsonify({'error': 'No puedes eliminar este usuario'}), 403
-            cur.execute('DELETE FROM users WHERE id = %s', (uid,))
+            try:
+                cur.execute('DELETE FROM users WHERE id = %s', (uid,))
+            except IntegrityError:
+                conn.rollback()
+                return jsonify({'error': 'No se puede eliminar: el cliente tiene pedidos'}), 409
             conn.commit()
     finally:
         conn.close()

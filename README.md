@@ -14,7 +14,9 @@ Página de presentación de productos con estética **Apple España** (dark show
   - **Admin**: CRUD de productos (con subida de imagen a `/uploads/`), gestión de clientes, cambio de estado de pedidos, panel de estadísticas.
   - **Cliente**: registro, compra, historial de pedidos.
 - **API REST** JSON en `/api/*`.
-- Datos persistidos en **PostgreSQL** (tablas `users`, `products`, `orders`).
+- Datos persistidos en **PostgreSQL** con integridad referencial:
+  `orders.user_id → users.id`, `order_items.order_id → orders.id` (CASCADE),
+  `order_items.product_id → products.id` (ver `migrate.py`).
 
 ## Requisitos
 
@@ -77,6 +79,13 @@ Abre **http://localhost:5000**
 
 En el primer arranque se crean las tablas y se insertan datos semilla (productos de muestra + 2 usuarios).
 
+> **BD ya existente (sin FKs):** ejecuta una vez la migración (idempotente) para
+> añadir `orders.user_id`, la tabla `order_items` y las claves foráneas —
+> conserva los datos y mueve el antiguo JSONB `orders.items` a `order_items`:
+> ```bash
+> python migrate.py
+> ```
+
 ## Usuarios demo
 
 | Rol | Email | Contraseña |
@@ -96,6 +105,7 @@ En el primer arranque se crean las tablas y se insertan datos semilla (productos
 VulcanoPagePy/
 ├── app.py                  # App Flask + API REST
 ├── db.py                   # Conexión, schema y datos semilla
+├── migrate.py              # Migración idempotente: añade las FKs a una BD existente
 ├── requirements.txt
 ├── .env.example            # Plantilla de configuración
 ├── README.md
@@ -107,6 +117,25 @@ VulcanoPagePy/
     ├── VULCANO.gif
     └── uploads/            # Imágenes subidas por el admin
 ```
+
+## Esquema de la base de datos
+
+```
+users(id PK, name, email UNIQUE, password_hash, role, created_at)
+products(id PK, name, cat, price, badge, art, img, desc, specs JSONB)
+orders(id PK, code UNIQUE, user_id FK→users, email, name, total,
+       address JSONB, payment, status, created_at)
+order_items(id PK, order_id FK→orders ON DELETE CASCADE,
+            product_id FK→products ON DELETE RESTRICT,
+            name snapshot, unit_price snapshot, qty)
+```
+
+Reglas de integridad:
+
+- No se puede eliminar un **producto** que aparezca en pedidos (la API devuelve `409`).
+- No se puede eliminar un **cliente** que tenga pedidos (`409`).
+- Al eliminar un **pedido** se borran sus líneas automáticamente (CASCADE).
+- El `name`/`unit_price` de cada línea es una foto del momento de compra: aunque el producto cambie de precio después, el pedido conserva el original.
 
 ## API
 
